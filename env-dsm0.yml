@@ -1,0 +1,200 @@
+name: dsm1
+channels:
+  - conda-forge
+  - bioconda
+  - pytorch
+  - nvidia
+  - schrodinger
+  - nodefaults
+dependencies:
+  # conda-forge::python=3.11
+  # conda-forge::python=3.10
+  - pynvml=11.5.0
+  - hjson-py
+  - dm-tree
+  - ninja
+  # pytorch::pytorch=2.1
+  # pytorch::pytorch<2.2
+  # pytorch::pytorch<2.1
+  - pytorch::pytorch==2.0.1
+  - pytorch::pytorch-cuda==11.8
+  - pytorch-lightning==1.8.6
+    #2.3.2 gave ImportError.. seed_everything from pytorch_lightning.utilities.seed from openfold/utils/seed.py
+    # is this a problem w/ Pytorch>2.0 ?
+  - packaging  # for Deepspeed?
+  # libaio     # for Deepspeed?  no libaio-dev for conda, started w/ sudo apt install libaio-dev
+  - mkl-include<2024
+  - torchvision
+  - torchaudio
+  - biotite
+  # numpy==1.21
+  # scipy==1.7
+  # biopython==1.79 is installed by pip, 1.84 available in conda
+  - biopython==1.79
+  # biopython # --> 1.84
+  #
+  - numpy=1.23.5
+  - padelpy==0.1.16
+  - mordredcommunity==2.0.5
+  # extra from pip install log
+  - pyparsing
+  - mhfp
+  - ninja=1.11.*
+  - aimsim
+  - configargparse==1.7
+  - astartes==1.2.2
+  # pinned old incompatible w/ python 3.11
+  - conda-forge::setuptools
+  - conda-forge::openmm
+  #
+  - scipy
+  - conda-forge::einops
+  # conda-forge::fairscale # incompatible w/ python 3.11
+  - cuda=11.8.*
+  - cuda-cccl=11.8.*
+  - cuda-command-line-tools=11.8.*
+  - cuda-compiler=11.8.*
+  - cuda-cudart=11.8.*
+  - cuda-cudart-dev=11.8.*
+  - cuda-cuobjdump=11.8.*
+  - cuda-cupti=11.8.*
+  - cuda-cuxxfilt=11.8.*
+  - cuda-driver-dev=11.8.*
+  - cuda-gdb=11.8.*
+  - cuda-libraries=11.8.*
+  - cuda-libraries-dev=11.8.*
+  - cuda-nsight=11.8.*
+  - cuda-nsight-compute=11.8.*
+  - cuda-nvcc=11.8.*
+  - cuda-nvdisasm=11.8.*
+  - cuda-nvml-dev=11.8.*
+  - cuda-nvprof=11.8.*
+  - cuda-nvprune=11.8.*
+  - cuda-nvrtc=11.8.*
+  - cuda-nvrtc-dev=11.8.*
+  - cuda-nvtx=11.8.*
+  - cuda-nvvp=11.8.*
+  - cuda-profiler-api=11.8.*
+  - cuda-runtime=11.8.*
+  - cuda-sanitizer-api=11.8.*
+  - cuda-toolkit=11.8.*
+  - cuda-tools=11.8.*
+  - cuda-visual-tools=11.8.*
+  - cudatoolkit=11.8.*
+  - conda-forge::pip
+  - conda-forge::pdbfixer
+  - conda-forge::omegaconf
+  - conda-forge::hydra-core
+  - conda-forge::pandas
+  - conda-forge::pytest
+  - requests
+  - tqdm
+  - typing-extensions
+  - wandb
+  - modelcif
+  - awscli
+  - ml-collections
+  - aria2
+  - git
+  - PyYAML==5.4.1
+  - bioconda::hmmer==3.3.2
+  - bioconda::hhsuite==3.3.0
+  - bioconda::kalign2==2.04
+  # extra for DSMbind
+  - rdkit
+  # chemprop pip install, below
+  # sidechainnet<=0.7.6 pip install, below
+  # extra for chemprop
+  - scikit-learn
+  # extra for sidechainnet 
+  - pandas
+  # extra for ProDy (req by sidechainnet) (which also wants biotite, numpy, scipy, biopython (permissive versioning)
+  - ProDy>=2.0
+    # ProDy==2.4.1 # pip uses this non-conda version
+    # conda version 2.2 is installed.  without this conda "pre-install" , pip build of prody 2.4.1 failed !
+    # also available from pip are prody==2.41.[Aug,2023], ..., 2.2.0[May 19,2022], ... 2.1.0[Apr 8, 2022], ... 2.0[Feb 7, 2021]
+  - py-cpuinfo
+  # for compilation
+  - gcc<12.0
+  - gxx<12.0
+  - clang
+  - sysroot_linux-64==2.17
+  - ca-certificates
+  - certifi
+  - openssl
+  - pydantic
+  # extra for plotting and ipython notebooks
+  - packaging
+  - transformers
+  - salilab::dssp
+  - rotary-embedding-torch
+  # ipython
+  # jupyter
+  # ipykernel
+  # ipywidgets
+  # nb_conda_kernels
+  # notebook
+  # nbconvert
+  # nbconvert-pandoc
+  # jupyter_console
+  - seaborn
+  - black
+  - py3dmol
+  - matplotlib
+  - transformers
+  - salilab::dssp
+  - rotary-embedding-torch
+  - jupyter
+  - seaborn
+  - black
+  - py3dmol
+  - matplotlib
+  # used by deprecated torch._six ... (python 2/3 compat libs)
+  - six
+  - future
+  - pip:
+    - git+https://github.com/NVIDIA/dllogger.git
+    # git+https://github.com/aqlaboratory/openfold.git
+    # git+https://github.com/Dao-AILab/flash-attention.git@5b838a8
+    # git+https://github.com/aqlaboratory/openfold.git@4b41059694619831a7db195b7e0988fc4ff3a307
+    # chemprop tag v2.0.3, ~ June 2024
+    #
+    # git+https://github.com/wengong-jin/DSMBind/
+      # No setup.py, so not pip-installable
+    # git+https://github.com/asappresearch/sru@9ddc8da12f067125c2cfdd4f3b28a87c02889681
+    # git+https://github.com/chemprop/chemprop@e5aae85
+    # git+https://github.com/jonathanking/sidechainnet/
+    #   Some of these can have simpler pip installs with pinned versions:
+    - biopython==1.79
+    - sru==3.0.0.dev6
+    # git+https://github.com/chemprop/chemprop@e5aae85
+    # sidechainnet
+      # ERROR: Could not find a version that satisfies the requirement sidechainnet (from versions: none)
+    - git+https://github.com/jonathanking/sidechainnet/
+      # error during prody-2.4.1 build, FIXED by pre-installing conda prody (w/ version 2.2)
+      # w/ "Requirement already satisfied" message from pip
+      # and then "Building wheel for ProDy (pyproject.toml): started
+      # ... Successfully installed ProDy-2.4.1 sidechainnet-1.0.1+3.g99ac31c sru-3.0.0.dev0
+    # fair-esm==1.0.3 # this does not provide the _v1 (bug, see https://github.com/facebookresearch/esm/issues/460
+    # fair-esm==1.0.2 # AttributeError: module 'esm.pretrained' has no attribute 'esmfold_v1'
+    # git+https://github.com/microsoft/DeepSpeed.git
+    # fair-esm[esmfold] # this has esmfold_v1 (with pip install),
+      # but requires 'flash-attention' to be installed:
+      # import flash_attn_cuda --> ImportError: libc10_cuda.so: cannot open shared object file
+    # git+https://github.com/Dao-AILab/flash-attention.git@5b838a8 
+      # Issue: w/ python 2.3.1 I had no torch cuda!
+      #   kruus@snake10$ python -c 'import torch; print(torch.__version__, torch.cuda.is_available())'
+      #   2.3.1.post100 False
+
+  # ISSUE: deepspeed uses torch._six which disappeared Feb 12
+  # pip:
+  #   - deepspeed==0.5.9
+  #   - dllogger==1.0.0
+  #   - fair-esm==2.0.0
+  #   - ninja==1.11.1.1
+  #   - numpy==1.23.5
+  #   - prody==2.4.1
+  #   - py-cpuinfo==9.0.0
+  #   - sidechainnet==1.0.1
+  #   - sru==3.0.0.dev0
+prefix: /home/ml/kruus/anaconda3/envs/dsm1

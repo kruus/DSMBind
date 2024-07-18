@@ -1,0 +1,261 @@
+diff --git a/bindenergy/data/drug.py b/bindenergy/data/drug.py
+index 303f699..c2f0ce2 100644
+--- a/bindenergy/data/drug.py
++++ b/bindenergy/data/drug.py
+@@ -1,14 +1,14 @@
+ import torch
+-import torch.nn.functional as F
++# import torch.nn.functional as F
+ import numpy as np
+ import pickle
+-import random
++# import random
+ 
+ from tqdm import tqdm
+-from copy import deepcopy
++# from copy import deepcopy
+ from bindenergy.data.constants import *
+ from bindenergy.data.loader import *
+-from rdkit import Chem
++# from rdkit import Chem
+ 
+ 
+ class DrugDataset():
+@@ -16,17 +16,18 @@ class DrugDataset():
+     def __init__(self, data_path, patch_size):
+         with open(data_path, 'rb') as f:
+             data = pickle.load(f)
+-            
++
+         self.data = []
+         for entry in tqdm(data):
+             entry['target_coords'] = torch.tensor(entry['target_coords']).float()
+             entry['target_dihedrals'] = torch.zeros(len(entry['target_seq']), 6)
+             entry['target_atypes'] = torch.tensor(
+-                [[ATOM_TYPES.index(a) for a in RES_ATOM14[ALPHABET.index(s)]] for s in entry['target_seq']]
++                [[ATOM_TYPES.index(a) for a in RES_ATOM14[ALPHABET.index(s)]]
++                 for s in entry['target_seq']]
+             )
+             mol = entry['binder_mol']
+             conf = mol.GetConformer()
+-            coords = [conf.GetAtomPosition(i) for i,atom in enumerate(mol.GetAtoms())]
++            coords = [conf.GetAtomPosition(i) for i, atom in enumerate(mol.GetAtoms())]
+             entry['binder_coords'] = torch.tensor([[p.x, p.y, p.z] for p in coords]).float()
+             # make pocket
+             dist = entry['target_coords'][:, 1] - entry['binder_coords'].mean(dim=0, keepdims=True)
+@@ -50,11 +51,12 @@ class DrugDataset():
+             entry['target_coords'] = torch.tensor(entry['target_coords']).float()
+             entry['target_dihedrals'] = torch.zeros(len(entry['target_seq']), 6)
+             entry['target_atypes'] = torch.tensor(
+-                [[ATOM_TYPES.index(a) for a in RES_ATOM14[ALPHABET.index(s)]] for s in entry['target_seq']]
++                [[ATOM_TYPES.index(a) for a in RES_ATOM14[ALPHABET.index(s)]]
++                 for s in entry['target_seq']]
+             )
+             mol = entry['binder_mol']
+             conf = mol.GetConformer()
+-            coords = [conf.GetAtomPosition(i) for i,atom in enumerate(mol.GetAtoms())]
++            coords = [conf.GetAtomPosition(i) for i, atom in enumerate(mol.GetAtoms())]
+             entry['binder_coords'] = torch.tensor([[p.x, p.y, p.z] for p in coords]).float()
+             # make pocket
+             dist = entry['target_coords'][:, 1] - entry['binder_coords'].mean(dim=0, keepdims=True)
+@@ -74,12 +76,12 @@ class DrugDataset():
+         bind_A = torch.zeros(len(batch), N, 14).cuda().long()
+         tgt_X, tgt_S, tgt_A, tgt_V = featurize(batch, 'pocket')
+         tgt_S = torch.zeros(tgt_S.size(0), tgt_S.size(1), args.esm_size).cuda()
+-        for i,b in enumerate(batch):
++        for i, b in enumerate(batch):
+             L = b['binder_mol'].GetNumAtoms()
+-            bind_X[i,:L,1,:] = b['binder_coords']
+-            bind_A[i,:L,1] = 1
++            bind_X[i, :L, 1, :] = b['binder_coords']
++            bind_A[i, :L, 1] = 1
+             L = len(b['pocket_seq'])
+-            tgt_S[i,:L] = embedding[b['target_seq']][b['pocket_idx']]
++            tgt_S[i, :L] = embedding[b['target_seq']][b['pocket_idx']]
+         return (bind_X, mols, bind_A, None), (tgt_X, tgt_S, tgt_A, tgt_V)
+ 
+ 
+@@ -95,11 +97,11 @@ class PocketDataset():
+             pocket = pocket[np.isin(pocket.atom_name, ATOM_TYPES)]
+             entry['target_coords'] = torch.tensor(pocket.coord).float()
+             entry['target_atypes'] = torch.tensor([
+-                    ATOM_TYPES.index(a) for a in pocket.atom_name
++                ATOM_TYPES.index(a) for a in pocket.atom_name
+             ])
+             mol = entry['binder_mol']
+             conf = mol.GetConformer()
+-            coords = [conf.GetAtomPosition(i) for i,atom in enumerate(mol.GetAtoms())]
++            coords = [conf.GetAtomPosition(i) for i, atom in enumerate(mol.GetAtoms())]
+             entry['binder_coords'] = torch.tensor([[p.x, p.y, p.z] for p in coords]).float()
+             self.data.append(entry)
+ 
+@@ -119,12 +121,12 @@ class PocketDataset():
+         tgt_X = torch.zeros(len(batch), M, 14, 3).cuda()
+         tgt_S = torch.zeros(len(batch), M).cuda().long()
+         tgt_A = torch.zeros(len(batch), M, 14).cuda()
+-        for i,b in enumerate(batch):
++        for i, b in enumerate(batch):
+             L = b['binder_mol'].GetNumAtoms()
+-            bind_X[i,:L,1,:] = b['binder_coords']
+-            bind_A[i,:L,1] = 1
++            bind_X[i, :L, 1, :] = b['binder_coords']
++            bind_A[i, :L, 1] = 1
+             L = len(b['target_atypes'])
+-            tgt_X[i,:L,1,:] = b['target_coords']
+-            tgt_S[i,:L] = b['target_atypes']
+-            tgt_A[i,:L,1] = 1
++            tgt_X[i, :L, 1, :] = b['target_coords']
++            tgt_S[i, :L] = b['target_atypes']
++            tgt_A[i, :L, 1] = 1
+         return (bind_X, mols, bind_A, None), (tgt_X, tgt_S, tgt_A, None)
+diff --git a/bindenergy/models/frame.py b/bindenergy/models/frame.py
+index 89d80df..b02f426 100644
+--- a/bindenergy/models/frame.py
++++ b/bindenergy/models/frame.py
+@@ -2,7 +2,8 @@ import torch
+ import torch.nn as nn
+ import numpy as np
+ from sru import SRUpp
+-from bindenergy.utils.utils import * 
++from bindenergy.utils.utils import *
++from packaging import version
+ 
+ 
+ class FrameAveraging(nn.Module):
+@@ -10,7 +11,7 @@ class FrameAveraging(nn.Module):
+     def __init__(self):
+         super(FrameAveraging, self).__init__()
+         self.ops = torch.tensor([
+-                [i,j,k] for i in [-1,1] for j in [-1,1] for k in [-1,1]
++            [i,j,k] for i in [-1,1] for j in [-1,1] for k in [-1,1]
+         ]).cuda()
+ 
+     def create_frame(self, X, mask):
+@@ -18,7 +19,16 @@ class FrameAveraging(nn.Module):
+         center = (X * mask).sum(dim=1) / mask.sum(dim=1)
+         X = X - center.unsqueeze(1) * mask  # [B,N,3]
+         C = torch.bmm(X.transpose(1,2), X)  # [B,3,3] (Cov)
+-        _, V = torch.symeig(C.detach(), True)  # [B,3,3]
++
++        # C --> eigenvectors V [B,3,3]
++        if version.parse(torch.__version__) >= version.parse("1.9"):  # pytorch new replacement
++            # linalg.eigh -> named tuple(eigenvalues, eigenvectors)
++            upper = True                                    # default symeig
++            UPLO = "U" if upper else "L"
++            _, V = torch.linalg.eigh(C.detach(), UPLO=UPLO)  # [B,3,3]
++        else:
++            _, V = torch.symeig(C.detach(), True)  # [B,3,3]
++
+         F_ops = self.ops.unsqueeze(1).unsqueeze(0) * V.unsqueeze(1)  # [1,8,1,3] x [B,1,3,3] -> [B,8,3,3]
+         h = torch.einsum('boij,bpj->bopi', F_ops.transpose(2,3), X)  # transpose is inverse [B,8,N,3]
+         h = h.view(X.size(0) * 8, X.size(1), 3)
+@@ -168,4 +178,4 @@ class SingleChainEncoder(FrameAveraging):
+                 mask_pad=(~mask.transpose(0, 1).bool())
+         )
+         h = h.transpose(0, 1).view(B, 8, N*14, -1)
+-        return h.mean(dim=1)  # frame averaging
+\ No newline at end of file
++        return h.mean(dim=1)  # frame averaging
+diff --git a/bindenergy/utils/ioutils.py b/bindenergy/utils/ioutils.py
+index 8e95edf..d9573c7 100644
+--- a/bindenergy/utils/ioutils.py
++++ b/bindenergy/utils/ioutils.py
+@@ -1,10 +1,15 @@
+-import biotite.structure as struc
+-from biotite.structure import AtomArray, Atom
+-from biotite.structure.io import save_structure
+-from bindenergy.data.constants import *
+-from tqdm import tqdm, trange
++# import biotite.structure as struc
++# from biotite.structure import AtomArray, Atom
++from biotite.structure import Atom
++# from biotite.structure.io import save_structure
++# from bindenergy.data.constants import *
++# from bindenergy.data.constants import RESTYPE_1to3, ALPHABET, ATOM_TYPES
++# from bindenergy.data.constants import RES_ATOM14, AA_WEIGHTS, ATOM_WEIGHTS
++from bindenergy.data.constants import RESTYPE_1to3, ALPHABET, RES_ATOM14
++from tqdm import tqdm   # , trange
+ import torch
+ import esm
++import gc
+ 
+ 
+ def print_pdb(coord, seq, chain, indices=None):
+@@ -14,9 +19,10 @@ def print_pdb(coord, seq, chain, indices=None):
+         aaname = seq[i]
+         aid = ALPHABET.index(aaname)
+         aaname = RESTYPE_1to3[aaname]
+-        for j,atom in enumerate(RES_ATOM14[aid]):
++        for j, atom in enumerate(RES_ATOM14[aid]):
+             if atom != '' and (coord[i, j] ** 2).sum() > 1e-4:
+-                atom = Atom(coord[i, j], chain_id=chain, res_id=idx, atom_name=atom, res_name=aaname, element=atom[0])
++                atom = Atom(coord[i, j], chain_id=chain, res_id=idx,
++                            atom_name=atom, res_name=aaname, element=atom[0])
+                 array.append(atom)
+     return array
+ 
+@@ -27,14 +33,36 @@ def print_ca_pdb(coord, seq, chain, indices=None):
+         idx = indices[i] + 1 if indices else i + 1
+         aaname = seq[i]
+         aaname = RESTYPE_1to3[aaname]
+-        atom = Atom(coord[i, 1], chain_id=chain, res_id=idx, atom_name="CA", res_name=aaname, element='C')
++        atom = Atom(coord[i, 1], chain_id=chain, res_id=idx,
++                    atom_name="CA", res_name=aaname, element='C')
+         array.append(atom)
+     return array
+ 
+ 
+-def load_esm_embedding(data, fields):
++# esm will use 16-24 Gb GPU mem
++#  https://colab.research.google.com/github/huggingface/notebooks/blob/main/examples/protein_folding.ipynb
++#  so I can convert the model the 'half'
++#  but first try
++#    import torch
++#    print(torch.cuda.is_bf16_supported()
++#
++# memory usage for attention during training will scale as O(batch_size * num_layers * seq_len^2)
++#
++def load_esm_embedding(data, fields, truncation_seq_length: int = None):
+     model, alphabet = esm.pretrained.esm2_t36_3B_UR50D()
+-    batch_converter = alphabet.get_batch_converter()
++
++    # Note: 3B float32 suggests 16G to 24G GPU mem
++    # We can switch the esm "stem" to bfloat16 (training used bf16 anyway)
++    #   (If your GPU supports it)
++    if torch.cuda.is_bf16_supported():
++        model.esm = model.esm.half()
++
++    batch_converter = alphabet.get_batch_converter(
++        # truncation_seq_length=200   # just for kicks [default=None, "fixes" CUDA out of mem]
++        # This api change allows "load", but fails later from unexpected lengths
++        # (perhaps fully ignore such items?)
++        truncation_seq_length=truncation_seq_length
++    )
+     model = model.cuda()
+     model.eval()
+     embedding = {}
+@@ -45,5 +73,23 @@ def load_esm_embedding(data, fields):
+                 batch_labels, batch_strs, batch_tokens = batch_converter([(s, s)])
+                 batch_tokens = batch_tokens.cuda()
+                 results = model(batch_tokens, repr_layers=[36], return_contacts=False)
+-                embedding[s] = results["representations"][36][0, 1:len(s)+1].cpu()
++                # Note: issues later on if len(s) was truncated!
++                # embedding[s] = results["representations"][36][0, 1:len(s) + 1].cpu()
++                assert len(batch_strs) == 1
++                embedding[s] = results["representations"][36][0, 1:len(batch_strs[0]) + 1].cpu()
++                # trying to reduce memory requirements...
++                # batch_labels = None
++                # batch_strs = None
++                batch_tokens = None
++                results.clear()
++                results = None
++                torch.cuda.empty_cache()
++                # o/w may need to call get_batch_converter(truncation_seq_length=80) or such
++                gc.collect()
++                # print('GC collected objects : %d' % gc.collect())
++
++    model = None
++    torch.cuda.empty_cache()
++    print('FINAL: GC collected objects : %d' % gc.collect())
++
+     return embedding

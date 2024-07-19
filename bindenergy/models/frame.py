@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 from sru import SRUpp
-from bindenergy.utils.utils import * 
+from bindenergy.utils.utils import *
+from packaging import version
 
 
 class FrameAveraging(nn.Module):
@@ -10,7 +11,7 @@ class FrameAveraging(nn.Module):
     def __init__(self):
         super(FrameAveraging, self).__init__()
         self.ops = torch.tensor([
-                [i,j,k] for i in [-1,1] for j in [-1,1] for k in [-1,1]
+            [i,j,k] for i in [-1,1] for j in [-1,1] for k in [-1,1]
         ]).cuda()
 
     def create_frame(self, X, mask):
@@ -18,7 +19,16 @@ class FrameAveraging(nn.Module):
         center = (X * mask).sum(dim=1) / mask.sum(dim=1)
         X = X - center.unsqueeze(1) * mask  # [B,N,3]
         C = torch.bmm(X.transpose(1,2), X)  # [B,3,3] (Cov)
-        _, V = torch.symeig(C.detach(), True)  # [B,3,3]
+
+        # C --> eigenvectors V [B,3,3]
+        if version.parse(torch.__version__) >= version.parse("1.9"):  # pytorch new replacement
+            # linalg.eigh -> named tuple(eigenvalues, eigenvectors)
+            upper = True                                    # default symeig
+            UPLO = "U" if upper else "L"
+            _, V = torch.linalg.eigh(C.detach(), UPLO=UPLO)  # [B,3,3]
+        else:
+            _, V = torch.symeig(C.detach(), True)  # [B,3,3]
+
         F_ops = self.ops.unsqueeze(1).unsqueeze(0) * V.unsqueeze(1)  # [1,8,1,3] x [B,1,3,3] -> [B,8,3,3]
         h = torch.einsum('boij,bpj->bopi', F_ops.transpose(2,3), X)  # transpose is inverse [B,8,N,3]
         h = h.view(X.size(0) * 8, X.size(1), 3)

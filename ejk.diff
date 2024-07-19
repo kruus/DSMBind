@@ -1,0 +1,625 @@
+diff --git a/bindenergy/data/drug.py b/bindenergy/data/drug.py
+index 303f699..c2f0ce2 100644
+--- a/bindenergy/data/drug.py
++++ b/bindenergy/data/drug.py
+@@ -1,14 +1,14 @@
+ import torch
+-import torch.nn.functional as F
++# import torch.nn.functional as F
+ import numpy as np
+ import pickle
+-import random
++# import random
+ 
+ from tqdm import tqdm
+-from copy import deepcopy
++# from copy import deepcopy
+ from bindenergy.data.constants import *
+ from bindenergy.data.loader import *
+-from rdkit import Chem
++# from rdkit import Chem
+ 
+ 
+ class DrugDataset():
+@@ -16,17 +16,18 @@ class DrugDataset():
+     def __init__(self, data_path, patch_size):
+         with open(data_path, 'rb') as f:
+             data = pickle.load(f)
+-            
++
+         self.data = []
+         for entry in tqdm(data):
+             entry['target_coords'] = torch.tensor(entry['target_coords']).float()
+             entry['target_dihedrals'] = torch.zeros(len(entry['target_seq']), 6)
+             entry['target_atypes'] = torch.tensor(
+-                [[ATOM_TYPES.index(a) for a in RES_ATOM14[ALPHABET.index(s)]] for s in entry['target_seq']]
++                [[ATOM_TYPES.index(a) for a in RES_ATOM14[ALPHABET.index(s)]]
++                 for s in entry['target_seq']]
+             )
+             mol = entry['binder_mol']
+             conf = mol.GetConformer()
+-            coords = [conf.GetAtomPosition(i) for i,atom in enumerate(mol.GetAtoms())]
++            coords = [conf.GetAtomPosition(i) for i, atom in enumerate(mol.GetAtoms())]
+             entry['binder_coords'] = torch.tensor([[p.x, p.y, p.z] for p in coords]).float()
+             # make pocket
+             dist = entry['target_coords'][:, 1] - entry['binder_coords'].mean(dim=0, keepdims=True)
+@@ -50,11 +51,12 @@ class DrugDataset():
+             entry['target_coords'] = torch.tensor(entry['target_coords']).float()
+             entry['target_dihedrals'] = torch.zeros(len(entry['target_seq']), 6)
+             entry['target_atypes'] = torch.tensor(
+-                [[ATOM_TYPES.index(a) for a in RES_ATOM14[ALPHABET.index(s)]] for s in entry['target_seq']]
++                [[ATOM_TYPES.index(a) for a in RES_ATOM14[ALPHABET.index(s)]]
++                 for s in entry['target_seq']]
+             )
+             mol = entry['binder_mol']
+             conf = mol.GetConformer()
+-            coords = [conf.GetAtomPosition(i) for i,atom in enumerate(mol.GetAtoms())]
++            coords = [conf.GetAtomPosition(i) for i, atom in enumerate(mol.GetAtoms())]
+             entry['binder_coords'] = torch.tensor([[p.x, p.y, p.z] for p in coords]).float()
+             # make pocket
+             dist = entry['target_coords'][:, 1] - entry['binder_coords'].mean(dim=0, keepdims=True)
+@@ -74,12 +76,12 @@ class DrugDataset():
+         bind_A = torch.zeros(len(batch), N, 14).cuda().long()
+         tgt_X, tgt_S, tgt_A, tgt_V = featurize(batch, 'pocket')
+         tgt_S = torch.zeros(tgt_S.size(0), tgt_S.size(1), args.esm_size).cuda()
+-        for i,b in enumerate(batch):
++        for i, b in enumerate(batch):
+             L = b['binder_mol'].GetNumAtoms()
+-            bind_X[i,:L,1,:] = b['binder_coords']
+-            bind_A[i,:L,1] = 1
++            bind_X[i, :L, 1, :] = b['binder_coords']
++            bind_A[i, :L, 1] = 1
+             L = len(b['pocket_seq'])
+-            tgt_S[i,:L] = embedding[b['target_seq']][b['pocket_idx']]
++            tgt_S[i, :L] = embedding[b['target_seq']][b['pocket_idx']]
+         return (bind_X, mols, bind_A, None), (tgt_X, tgt_S, tgt_A, tgt_V)
+ 
+ 
+@@ -95,11 +97,11 @@ class PocketDataset():
+             pocket = pocket[np.isin(pocket.atom_name, ATOM_TYPES)]
+             entry['target_coords'] = torch.tensor(pocket.coord).float()
+             entry['target_atypes'] = torch.tensor([
+-                    ATOM_TYPES.index(a) for a in pocket.atom_name
++                ATOM_TYPES.index(a) for a in pocket.atom_name
+             ])
+             mol = entry['binder_mol']
+             conf = mol.GetConformer()
+-            coords = [conf.GetAtomPosition(i) for i,atom in enumerate(mol.GetAtoms())]
++            coords = [conf.GetAtomPosition(i) for i, atom in enumerate(mol.GetAtoms())]
+             entry['binder_coords'] = torch.tensor([[p.x, p.y, p.z] for p in coords]).float()
+             self.data.append(entry)
+ 
+@@ -119,12 +121,12 @@ class PocketDataset():
+         tgt_X = torch.zeros(len(batch), M, 14, 3).cuda()
+         tgt_S = torch.zeros(len(batch), M).cuda().long()
+         tgt_A = torch.zeros(len(batch), M, 14).cuda()
+-        for i,b in enumerate(batch):
++        for i, b in enumerate(batch):
+             L = b['binder_mol'].GetNumAtoms()
+-            bind_X[i,:L,1,:] = b['binder_coords']
+-            bind_A[i,:L,1] = 1
++            bind_X[i, :L, 1, :] = b['binder_coords']
++            bind_A[i, :L, 1] = 1
+             L = len(b['target_atypes'])
+-            tgt_X[i,:L,1,:] = b['target_coords']
+-            tgt_S[i,:L] = b['target_atypes']
+-            tgt_A[i,:L,1] = 1
++            tgt_X[i, :L, 1, :] = b['target_coords']
++            tgt_S[i, :L] = b['target_atypes']
++            tgt_A[i, :L, 1] = 1
+         return (bind_X, mols, bind_A, None), (tgt_X, tgt_S, tgt_A, None)
+diff --git a/bindenergy/models/frame.py b/bindenergy/models/frame.py
+index 89d80df..b02f426 100644
+--- a/bindenergy/models/frame.py
++++ b/bindenergy/models/frame.py
+@@ -2,7 +2,8 @@ import torch
+ import torch.nn as nn
+ import numpy as np
+ from sru import SRUpp
+-from bindenergy.utils.utils import * 
++from bindenergy.utils.utils import *
++from packaging import version
+ 
+ 
+ class FrameAveraging(nn.Module):
+@@ -10,7 +11,7 @@ class FrameAveraging(nn.Module):
+     def __init__(self):
+         super(FrameAveraging, self).__init__()
+         self.ops = torch.tensor([
+-                [i,j,k] for i in [-1,1] for j in [-1,1] for k in [-1,1]
++            [i,j,k] for i in [-1,1] for j in [-1,1] for k in [-1,1]
+         ]).cuda()
+ 
+     def create_frame(self, X, mask):
+@@ -18,7 +19,16 @@ class FrameAveraging(nn.Module):
+         center = (X * mask).sum(dim=1) / mask.sum(dim=1)
+         X = X - center.unsqueeze(1) * mask  # [B,N,3]
+         C = torch.bmm(X.transpose(1,2), X)  # [B,3,3] (Cov)
+-        _, V = torch.symeig(C.detach(), True)  # [B,3,3]
++
++        # C --> eigenvectors V [B,3,3]
++        if version.parse(torch.__version__) >= version.parse("1.9"):  # pytorch new replacement
++            # linalg.eigh -> named tuple(eigenvalues, eigenvectors)
++            upper = True                                    # default symeig
++            UPLO = "U" if upper else "L"
++            _, V = torch.linalg.eigh(C.detach(), UPLO=UPLO)  # [B,3,3]
++        else:
++            _, V = torch.symeig(C.detach(), True)  # [B,3,3]
++
+         F_ops = self.ops.unsqueeze(1).unsqueeze(0) * V.unsqueeze(1)  # [1,8,1,3] x [B,1,3,3] -> [B,8,3,3]
+         h = torch.einsum('boij,bpj->bopi', F_ops.transpose(2,3), X)  # transpose is inverse [B,8,N,3]
+         h = h.view(X.size(0) * 8, X.size(1), 3)
+@@ -168,4 +178,4 @@ class SingleChainEncoder(FrameAveraging):
+                 mask_pad=(~mask.transpose(0, 1).bool())
+         )
+         h = h.transpose(0, 1).view(B, 8, N*14, -1)
+-        return h.mean(dim=1)  # frame averaging
+\ No newline at end of file
++        return h.mean(dim=1)  # frame averaging
+diff --git a/bindenergy/utils/ioutils.py b/bindenergy/utils/ioutils.py
+index 8e95edf..d9573c7 100644
+--- a/bindenergy/utils/ioutils.py
++++ b/bindenergy/utils/ioutils.py
+@@ -1,10 +1,15 @@
+-import biotite.structure as struc
+-from biotite.structure import AtomArray, Atom
+-from biotite.structure.io import save_structure
+-from bindenergy.data.constants import *
+-from tqdm import tqdm, trange
++# import biotite.structure as struc
++# from biotite.structure import AtomArray, Atom
++from biotite.structure import Atom
++# from biotite.structure.io import save_structure
++# from bindenergy.data.constants import *
++# from bindenergy.data.constants import RESTYPE_1to3, ALPHABET, ATOM_TYPES
++# from bindenergy.data.constants import RES_ATOM14, AA_WEIGHTS, ATOM_WEIGHTS
++from bindenergy.data.constants import RESTYPE_1to3, ALPHABET, RES_ATOM14
++from tqdm import tqdm   # , trange
+ import torch
+ import esm
++import gc
+ 
+ 
+ def print_pdb(coord, seq, chain, indices=None):
+@@ -14,9 +19,10 @@ def print_pdb(coord, seq, chain, indices=None):
+         aaname = seq[i]
+         aid = ALPHABET.index(aaname)
+         aaname = RESTYPE_1to3[aaname]
+-        for j,atom in enumerate(RES_ATOM14[aid]):
++        for j, atom in enumerate(RES_ATOM14[aid]):
+             if atom != '' and (coord[i, j] ** 2).sum() > 1e-4:
+-                atom = Atom(coord[i, j], chain_id=chain, res_id=idx, atom_name=atom, res_name=aaname, element=atom[0])
++                atom = Atom(coord[i, j], chain_id=chain, res_id=idx,
++                            atom_name=atom, res_name=aaname, element=atom[0])
+                 array.append(atom)
+     return array
+ 
+@@ -27,14 +33,36 @@ def print_ca_pdb(coord, seq, chain, indices=None):
+         idx = indices[i] + 1 if indices else i + 1
+         aaname = seq[i]
+         aaname = RESTYPE_1to3[aaname]
+-        atom = Atom(coord[i, 1], chain_id=chain, res_id=idx, atom_name="CA", res_name=aaname, element='C')
++        atom = Atom(coord[i, 1], chain_id=chain, res_id=idx,
++                    atom_name="CA", res_name=aaname, element='C')
+         array.append(atom)
+     return array
+ 
+ 
+-def load_esm_embedding(data, fields):
++# esm will use 16-24 Gb GPU mem
++#  https://colab.research.google.com/github/huggingface/notebooks/blob/main/examples/protein_folding.ipynb
++#  so I can convert the model the 'half'
++#  but first try
++#    import torch
++#    print(torch.cuda.is_bf16_supported()
++#
++# memory usage for attention during training will scale as O(batch_size * num_layers * seq_len^2)
++#
++def load_esm_embedding(data, fields, truncation_seq_length: int = None):
+     model, alphabet = esm.pretrained.esm2_t36_3B_UR50D()
+-    batch_converter = alphabet.get_batch_converter()
++
++    # Note: 3B float32 suggests 16G to 24G GPU mem
++    # We can switch the esm "stem" to bfloat16 (training used bf16 anyway)
++    #   (If your GPU supports it)
++    if torch.cuda.is_bf16_supported():
++        model.esm = model.esm.half()
++
++    batch_converter = alphabet.get_batch_converter(
++        # truncation_seq_length=200   # just for kicks [default=None, "fixes" CUDA out of mem]
++        # This api change allows "load", but fails later from unexpected lengths
++        # (perhaps fully ignore such items?)
++        truncation_seq_length=truncation_seq_length
++    )
+     model = model.cuda()
+     model.eval()
+     embedding = {}
+@@ -45,5 +73,23 @@ def load_esm_embedding(data, fields):
+                 batch_labels, batch_strs, batch_tokens = batch_converter([(s, s)])
+                 batch_tokens = batch_tokens.cuda()
+                 results = model(batch_tokens, repr_layers=[36], return_contacts=False)
+-                embedding[s] = results["representations"][36][0, 1:len(s)+1].cpu()
++                # Note: issues later on if len(s) was truncated!
++                # embedding[s] = results["representations"][36][0, 1:len(s) + 1].cpu()
++                assert len(batch_strs) == 1
++                embedding[s] = results["representations"][36][0, 1:len(batch_strs[0]) + 1].cpu()
++                # trying to reduce memory requirements...
++                # batch_labels = None
++                # batch_strs = None
++                batch_tokens = None
++                results.clear()
++                results = None
++                torch.cuda.empty_cache()
++                # o/w may need to call get_batch_converter(truncation_seq_length=80) or such
++                gc.collect()
++                # print('GC collected objects : %d' % gc.collect())
++
++    model = None
++    torch.cuda.empty_cache()
++    print('FINAL: GC collected objects : %d' % gc.collect())
++
+     return embedding
+diff --git a/ejk0.diff b/ejk0.diff
+new file mode 100644
+index 0000000..1507af1
+--- /dev/null
++++ b/ejk0.diff
+@@ -0,0 +1,261 @@
+diff --git a/env-dsm0.yml b/env-dsm0.yml
+new file mode 100644
+index 0000000..72abcce
+--- /dev/null
++++ b/env-dsm0.yml
+@@ -0,0 +1,200 @@
++name: dsm1
++channels:
++  - conda-forge
++  - bioconda
++  - pytorch
++  - nvidia
++  - schrodinger
++  - nodefaults
++dependencies:
++  # conda-forge::python=3.11
++  # conda-forge::python=3.10
++  - pynvml=11.5.0
++  - hjson-py
++  - dm-tree
++  - ninja
++  # pytorch::pytorch=2.1
++  # pytorch::pytorch<2.2
++  # pytorch::pytorch<2.1
++  - pytorch::pytorch==2.0.1
++  - pytorch::pytorch-cuda==11.8
++  - pytorch-lightning==1.8.6
++    #2.3.2 gave ImportError.. seed_everything from pytorch_lightning.utilities.seed from openfold/utils/seed.py
++    # is this a problem w/ Pytorch>2.0 ?
++  - packaging  # for Deepspeed?
++  # libaio     # for Deepspeed?  no libaio-dev for conda, started w/ sudo apt install libaio-dev
++  - mkl-include<2024
++  - torchvision
++  - torchaudio
++  - biotite
++  # numpy==1.21
++  # scipy==1.7
++  # biopython==1.79 is installed by pip, 1.84 available in conda
++  - biopython==1.79
++  # biopython # --> 1.84
++  #
++  - numpy=1.23.5
++  - padelpy==0.1.16
++  - mordredcommunity==2.0.5
++  # extra from pip install log
++  - pyparsing
++  - mhfp
++  - ninja=1.11.*
++  - aimsim
++  - configargparse==1.7
++  - astartes==1.2.2
++  # pinned old incompatible w/ python 3.11
++  - conda-forge::setuptools
++  - conda-forge::openmm
++  #
++  - scipy
++  - conda-forge::einops
++  # conda-forge::fairscale # incompatible w/ python 3.11
++  - cuda=11.8.*
++  - cuda-cccl=11.8.*
++  - cuda-command-line-tools=11.8.*
++  - cuda-compiler=11.8.*
++  - cuda-cudart=11.8.*
++  - cuda-cudart-dev=11.8.*
++  - cuda-cuobjdump=11.8.*
++  - cuda-cupti=11.8.*
++  - cuda-cuxxfilt=11.8.*
++  - cuda-driver-dev=11.8.*
++  - cuda-gdb=11.8.*
++  - cuda-libraries=11.8.*
++  - cuda-libraries-dev=11.8.*
++  - cuda-nsight=11.8.*
++  - cuda-nsight-compute=11.8.*
++  - cuda-nvcc=11.8.*
++  - cuda-nvdisasm=11.8.*
++  - cuda-nvml-dev=11.8.*
++  - cuda-nvprof=11.8.*
++  - cuda-nvprune=11.8.*
++  - cuda-nvrtc=11.8.*
++  - cuda-nvrtc-dev=11.8.*
++  - cuda-nvtx=11.8.*
++  - cuda-nvvp=11.8.*
++  - cuda-profiler-api=11.8.*
++  - cuda-runtime=11.8.*
++  - cuda-sanitizer-api=11.8.*
++  - cuda-toolkit=11.8.*
++  - cuda-tools=11.8.*
++  - cuda-visual-tools=11.8.*
++  - cudatoolkit=11.8.*
++  - conda-forge::pip
++  - conda-forge::pdbfixer
++  - conda-forge::omegaconf
++  - conda-forge::hydra-core
++  - conda-forge::pandas
++  - conda-forge::pytest
++  - requests
++  - tqdm
++  - typing-extensions
++  - wandb
++  - modelcif
++  - awscli
++  - ml-collections
++  - aria2
++  - git
++  - PyYAML==5.4.1
++  - bioconda::hmmer==3.3.2
++  - bioconda::hhsuite==3.3.0
++  - bioconda::kalign2==2.04
++  # extra for DSMbind
++  - rdkit
++  # chemprop pip install, below
++  # sidechainnet<=0.7.6 pip install, below
++  # extra for chemprop
++  - scikit-learn
++  # extra for sidechainnet 
++  - pandas
++  # extra for ProDy (req by sidechainnet) (which also wants biotite, numpy, scipy, biopython (permissive versioning)
++  - ProDy>=2.0
++    # ProDy==2.4.1 # pip uses this non-conda version
++    # conda version 2.2 is installed.  without this conda "pre-install" , pip build of prody 2.4.1 failed !
++    # also available from pip are prody==2.41.[Aug,2023], ..., 2.2.0[May 19,2022], ... 2.1.0[Apr 8, 2022], ... 2.0[Feb 7, 2021]
++  - py-cpuinfo
++  # for compilation
++  - gcc<12.0
++  - gxx<12.0
++  - clang
++  - sysroot_linux-64==2.17
++  - ca-certificates
++  - certifi
++  - openssl
++  - pydantic
++  # extra for plotting and ipython notebooks
++  - packaging
++  - transformers
++  - salilab::dssp
++  - rotary-embedding-torch
++  # ipython
++  # jupyter
++  # ipykernel
++  # ipywidgets
++  # nb_conda_kernels
++  # notebook
++  # nbconvert
++  # nbconvert-pandoc
++  # jupyter_console
++  - seaborn
++  - black
++  - py3dmol
++  - matplotlib
++  - transformers
++  - salilab::dssp
++  - rotary-embedding-torch
++  - jupyter
++  - seaborn
++  - black
++  - py3dmol
++  - matplotlib
++  # used by deprecated torch._six ... (python 2/3 compat libs)
++  - six
++  - future
++  - pip:
++    - git+https://github.com/NVIDIA/dllogger.git
++    # git+https://github.com/aqlaboratory/openfold.git
++    # git+https://github.com/Dao-AILab/flash-attention.git@5b838a8
++    # git+https://github.com/aqlaboratory/openfold.git@4b41059694619831a7db195b7e0988fc4ff3a307
++    # chemprop tag v2.0.3, ~ June 2024
++    #
++    # git+https://github.com/wengong-jin/DSMBind/
++      # No setup.py, so not pip-installable
++    # git+https://github.com/asappresearch/sru@9ddc8da12f067125c2cfdd4f3b28a87c02889681
++    # git+https://github.com/chemprop/chemprop@e5aae85
++    # git+https://github.com/jonathanking/sidechainnet/
++    #   Some of these can have simpler pip installs with pinned versions:
++    - biopython==1.79
++    - sru==3.0.0.dev6
++    # git+https://github.com/chemprop/chemprop@e5aae85
++    # sidechainnet
++      # ERROR: Could not find a version that satisfies the requirement sidechainnet (from versions: none)
++    - git+https://github.com/jonathanking/sidechainnet/
++      # error during prody-2.4.1 build, FIXED by pre-installing conda prody (w/ version 2.2)
++      # w/ "Requirement already satisfied" message from pip
++      # and then "Building wheel for ProDy (pyproject.toml): started
++      # ... Successfully installed ProDy-2.4.1 sidechainnet-1.0.1+3.g99ac31c sru-3.0.0.dev0
++    # fair-esm==1.0.3 # this does not provide the _v1 (bug, see https://github.com/facebookresearch/esm/issues/460
++    # fair-esm==1.0.2 # AttributeError: module 'esm.pretrained' has no attribute 'esmfold_v1'
++    # git+https://github.com/microsoft/DeepSpeed.git
++    # fair-esm[esmfold] # this has esmfold_v1 (with pip install),
++      # but requires 'flash-attention' to be installed:
++      # import flash_attn_cuda --> ImportError: libc10_cuda.so: cannot open shared object file
++    # git+https://github.com/Dao-AILab/flash-attention.git@5b838a8 
++      # Issue: w/ python 2.3.1 I had no torch cuda!
++      #   kruus@snake10$ python -c 'import torch; print(torch.__version__, torch.cuda.is_available())'
++      #   2.3.1.post100 False
++
++  # ISSUE: deepspeed uses torch._six which disappeared Feb 12
++  # pip:
++  #   - deepspeed==0.5.9
++  #   - dllogger==1.0.0
++  #   - fair-esm==2.0.0
++  #   - ninja==1.11.1.1
++  #   - numpy==1.23.5
++  #   - prody==2.4.1
++  #   - py-cpuinfo==9.0.0
++  #   - sidechainnet==1.0.1
++  #   - sru==3.0.0.dev0
++prefix: /home/ml/kruus/anaconda3/envs/dsm1
+diff --git a/env.sh b/env.sh
+new file mode 100644
+index 0000000..72a720a
+--- /dev/null
++++ b/env.sh
+@@ -0,0 +1,123 @@
++set +x
++
++#
++# remove env dsm0
++#
++echo "CONDA_DEFAULT_ENV = $CONDA_DEFAULT_ENV"
++#if [ x"$CONDA_DEFAULT_ENV" = x"${CONDA_DEFAULT_ENV%dsm0}" ]; then 
++if [ x"${CONDA_DEFAULT_ENV}" = "xdsm0" ]; then 
++	conda deactivate
++fi
++if conda env list 2>&1 | grep dsm0
++then
++	echo "env dsm0 already exists"
++	conda env remove -n dsm0
++else
++	echo "env dsm0 does not yet exist"
++fi
++
++#
++# recreate dsm0 initial state via conda --clone
++#
++chem=/local/kruus/chem
++mydir=`pwd`
++conda create -n dsm0 --clone esm-pyt2
++conda env list
++set -x
++. ~/bin/conda.sh
++conda activate dsm0 || activate dsm0
++set +x
++export | grep CONDA
++echo "A CONDA_DEFAULT_ENV = $CONDA_DEFAULT_ENV"
++python -c "import torch; print(f'{torch.__version__=}'"
++cd $chem/esm-demo
++time python demo-esmfold.py 2>&1 | tee "$mydir/demo-esmfold-1.log"
++# correct output is something like:
++#	
++#	torch.__version__='2.0.1'
++#	esm.version.version='2.0.1'
++#	inference pdb for sequence[65] in 1.534 s
++#	88.28911067193674
++#	write pdb and struct.b_factor.mean() in 0.238 s
++#	
++#	real	0m37.557s
++#	user	1m2.444s
++#	sys	0m9.914s
++echo ""
++echo "*** End initial env dsm0 demo-esmfold.py test ***"
++echo ""
++
++#
++# Modify/update env dsm0
++#
++#conda install --override-channels -c nvidia -c pytorch -c conda-forge -c bioconda -y python=3.11
++cd $mydir 				# cd $chem/DSMBind
++#conda update --file env-dsm0.yml
++conda remove -y fairscale
++#mamba env update --name dsm0 --file env-dsm1-export.yml # dms1.sh uses env-dsm0.yml, thenn conda env export
++#mamba env update --name dsm0 --file env-dsm1-b.yml # dms1.sh uses env-dsm0.yml, thenn conda env export
++echo ""
++echo "   mamba env update --name dsm0 --file env-dsm0.yml"
++# *** conda env update now began to take a HUGE time to solve the environment ***
++#conda env update --name dsm0 --file env-dsm0.yml
++# *** so instead, try small updates
++echo 'mamba install --override-channels -c nvidia -c pytorch -c conda-forge -c bioconda -y biopython==1.79 numpy==1.23.5 ipython jupyterlab ipywidgets ipykernel nb_conda_kernels'
++mamba install --override-channels -c nvidia -c pytorch -c conda-forge -c bioconda -y biopython==1.79 numpy==1.23.5 ipython jupyterlab ipywidgets ipykernel conda-forge::nb_conda_kernels conda-forge::scikit-learn conda-forge::rdkit conda-forge::chemprop
++#  tqdm matplotlib pandas seaborn # already OK
++#  all that changed was numpy, biopython (ca-certificates certifi)
++#  Missing for DSMBing .ipynb : conda-forge::scikit-learn
++echo 'pip install sru==3.0.0.dev  git+https://github.com/jonathanking/sidechainnet/'
++pip install 'sru==3.0.0.dev6' 'git+https://github.com/jonathanking/sidechainnet/'
++# OH.  DSMBind lacks setup.py so is NOT pip-installable
++#echo 'pip install -e .'
++#pip install -e .
++
++
++#
++# ensure updated env dsm0
++#
++if [ ! x"${CONDA_DEFAULT_ENV}" = "dsm0" ]; then
++	if [ ! x"${CONDA_DEFAULT_ENV}" = "xbase" ]; then 
++		echo "B CONDA_DEFAULT_ENV = $CONDA_DEFAULT_ENV --> conda deactivate"
++		#conda deactivate
++		conda activate			# without args, returns to 'base'
++	fi
++	if [ ! x"${CONDA_DEFAULT_ENV}" = "xdsm0" ]; then 
++		conda activate dsm0
++	fi
++fi
++echo "C CONDA_DEFAULT_ENV = $CONDA_DEFAULT_ENV"
++
++#
++# test 'esm' in env dsm0
++#
++cd $chem/esm-demo
++echo "D CONDA_DEFAULT_ENV = $CONDA_DEFAULT_ENV"
++time python demo-esmfold.py 2>&1 | tee "$mydir/demo-esmfold-2.log"
++echo ""
++echo "*** End second env dsm0 demo-esmfold.py test ***"
++echo ""
++
++# DSMBind issues:
++#   ERROR: from sru import SRUpp  :  Fix by pip install sru=3.0.0.dev6 (was 3.0.0.dev)
++#   ERROR: from rdkit import Chem :  Fix by conda install --override-channels -c conda-forge -c bioconda rdkit
++#   --> Install: 15 packages Change: 13 packages Upgrade: 2 packages Downgrade: 21 packages (all seem minor)
++#   also missing:    chemprop (-> conda-forge, 1.61)
++
++# Issue: during
++#    embedding = load_esm_embedding(test_equibind.data + test_casf16.data + test_fep.data, ['target_seq'])
++#    OutOfMemoryError: CUDA out of memory. Tried to allocate 340.00 MiB (GPU 0; 11.90 GiB total capacity; 10.83 GiB already allocated; 322.12 MiB free; 10.92 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
++#    with os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "caching_allocator, max_split_size_mb=256"
++#    see 11.03 GiB already allocated; 75.38 MiB free; 11.09 GiB reserved in total
++#    ... so it need > 12Gb cuda memory.
++# introduced sequence length truncation parameter --> len 350 fits into 12 Gb for embedding step.
++#   torch>=1.9 deprecated symeig -- replace w/ torch.linalg.eigh, but parameters differ...
++#   TypeError: linalg_eigh(): argument 'UPLO' (position 2) must be str, not bool
++# torch.symeig(input, eigenvectors=False, upper=True, *, out=None)
++#   instructions in http://docs.pytorch.wiki/en/generated/torch.symeig.html
++
++# actual fix of GPU memory should be to add length restriction to 'DrugDataset',
++# to filter out any data for proteins > 350 (or so) residues.
++
++cd $mydir
++
+diff --git a/notes-dsmbind.md b/notes-dsmbind.md
+new file mode 100644
+index 0000000..f7617cd
+--- /dev/null
++++ b/notes-dsmbind.md
+@@ -0,0 +1,16 @@
++<!-- Required extensions: sane_lists, mdx_math(enable_dollar_delimiter=1)-->
++<!-- mdx_math is for $...$ and $$...$$ support -->
++<!-- other extensions (examples) wikilinks -->
++
++# DSMBind
++This is a directory-only project that might perform better then ESMfold.
++Unfortunately, the environment setup needs a layered install, that
++avoids satisfying all dependencies.
++
++After much work, `env.sh` leverages an initial `esm-pyt2` environment
++(see my chem/esm/ subdirectory, env-pyt2.0.yml
++
++The `ejk.ipynb` (copy of tutorial.ipynb) will not run on snake10:  
++CUDA out of memory (12 Gb available)
++
++The dataset is loaded into cuda memory first, and takes 6 Gb
+\ No newline at end of file

@@ -1,13 +1,15 @@
-import json 
+import json
 import random
-import torch
+
 import numpy as np
+import torch
+
 from bindenergy.data.constants import *
 
 
-class ComplexLoader():
+class ComplexLoader:
 
-    def __init__(self, dataset, batch_tokens, field='epitope_seq'):
+    def __init__(self, dataset, batch_tokens, field="epitope_seq"):
         self.dataset = dataset
         self.size = len(dataset)
         self.lengths = [len(dataset[i][field]) for i in range(self.size)]
@@ -47,12 +49,11 @@ def featurize(batch, name, vocab=ALPHABET):
 
     # Build the batch
     for i, b in enumerate(batch):
-        l = len(b[name + '_seq'])
-        indices = torch.tensor([vocab.index(a) for a in b[name + '_seq']])
-        S[i,:l] = indices
-        X[i,:l] = b[name + '_coords']
-        A[i,:l] = b[name + '_atypes']
-        V[i,:l] = b[name + '_dihedrals']
+        l = len(b[name + "_seq"])
+        indices = torch.tensor([vocab.index(a) for a in b[name + "_seq"]])
+        S[i, :l] = indices
+        X[i, :l] = b[name + "_coords"]
+        A[i, :l] = b[name + "_atypes"]
+        V[i, :l] = b[name + "_dihedrals"]
 
     return X.cuda(), S.cuda(), A.cuda(), V.cuda()
-

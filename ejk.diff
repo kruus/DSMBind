@@ -10,7 +10,7 @@ index 303f699..c2f0ce2 100644
  import pickle
 -import random
 +# import random
- 
+
  from tqdm import tqdm
 -from copy import deepcopy
 +# from copy import deepcopy
@@ -18,14 +18,14 @@ index 303f699..c2f0ce2 100644
  from bindenergy.data.loader import *
 -from rdkit import Chem
 +# from rdkit import Chem
- 
- 
+
+
  class DrugDataset():
 @@ -16,17 +16,18 @@ class DrugDataset():
      def __init__(self, data_path, patch_size):
          with open(data_path, 'rb') as f:
              data = pickle.load(f)
--            
+-
 +
          self.data = []
          for entry in tqdm(data):
@@ -73,8 +73,8 @@ index 303f699..c2f0ce2 100644
 -            tgt_S[i,:L] = embedding[b['target_seq']][b['pocket_idx']]
 +            tgt_S[i, :L] = embedding[b['target_seq']][b['pocket_idx']]
          return (bind_X, mols, bind_A, None), (tgt_X, tgt_S, tgt_A, tgt_V)
- 
- 
+
+
 @@ -95,11 +97,11 @@ class PocketDataset():
              pocket = pocket[np.isin(pocket.atom_name, ATOM_TYPES)]
              entry['target_coords'] = torch.tensor(pocket.coord).float()
@@ -88,7 +88,7 @@ index 303f699..c2f0ce2 100644
 +            coords = [conf.GetAtomPosition(i) for i, atom in enumerate(mol.GetAtoms())]
              entry['binder_coords'] = torch.tensor([[p.x, p.y, p.z] for p in coords]).float()
              self.data.append(entry)
- 
+
 @@ -119,12 +121,12 @@ class PocketDataset():
          tgt_X = torch.zeros(len(batch), M, 14, 3).cuda()
          tgt_S = torch.zeros(len(batch), M).cuda().long()
@@ -116,11 +116,11 @@ index 89d80df..b02f426 100644
  import torch.nn as nn
  import numpy as np
  from sru import SRUpp
--from bindenergy.utils.utils import * 
+-from bindenergy.utils.utils import *
 +from bindenergy.utils.utils import *
 +from packaging import version
- 
- 
+
+
  class FrameAveraging(nn.Module):
 @@ -10,7 +11,7 @@ class FrameAveraging(nn.Module):
      def __init__(self):
@@ -129,7 +129,7 @@ index 89d80df..b02f426 100644
 -                [i,j,k] for i in [-1,1] for j in [-1,1] for k in [-1,1]
 +            [i,j,k] for i in [-1,1] for j in [-1,1] for k in [-1,1]
          ]).cuda()
- 
+
      def create_frame(self, X, mask):
 @@ -18,7 +19,16 @@ class FrameAveraging(nn.Module):
          center = (X * mask).sum(dim=1) / mask.sum(dim=1)
@@ -178,8 +178,8 @@ index 8e95edf..d9573c7 100644
  import torch
  import esm
 +import gc
- 
- 
+
+
  def print_pdb(coord, seq, chain, indices=None):
 @@ -14,9 +19,10 @@ def print_pdb(coord, seq, chain, indices=None):
          aaname = seq[i]
@@ -193,7 +193,7 @@ index 8e95edf..d9573c7 100644
 +                            atom_name=atom, res_name=aaname, element=atom[0])
                  array.append(atom)
      return array
- 
+
 @@ -27,14 +33,36 @@ def print_ca_pdb(coord, seq, chain, indices=None):
          idx = indices[i] + 1 if indices else i + 1
          aaname = seq[i]
@@ -203,8 +203,8 @@ index 8e95edf..d9573c7 100644
 +                    atom_name="CA", res_name=aaname, element='C')
          array.append(atom)
      return array
- 
- 
+
+
 -def load_esm_embedding(data, fields):
 +# esm will use 16-24 Gb GPU mem
 +#  https://colab.research.google.com/github/huggingface/notebooks/blob/main/examples/protein_folding.ipynb
@@ -379,7 +379,7 @@ index 0000000..72abcce
 +  # sidechainnet<=0.7.6 pip install, below
 +  # extra for chemprop
 +  - scikit-learn
-+  # extra for sidechainnet 
++  # extra for sidechainnet
 +  - pandas
 +  # extra for ProDy (req by sidechainnet) (which also wants biotite, numpy, scipy, biopython (permissive versioning)
 +  - ProDy>=2.0
@@ -454,7 +454,7 @@ index 0000000..72abcce
 +    # fair-esm[esmfold] # this has esmfold_v1 (with pip install),
 +      # but requires 'flash-attention' to be installed:
 +      # import flash_attn_cuda --> ImportError: libc10_cuda.so: cannot open shared object file
-+    # git+https://github.com/Dao-AILab/flash-attention.git@5b838a8 
++    # git+https://github.com/Dao-AILab/flash-attention.git@5b838a8
 +      # Issue: w/ python 2.3.1 I had no torch cuda!
 +      #   kruus@snake10$ python -c 'import torch; print(torch.__version__, torch.cuda.is_available())'
 +      #   2.3.1.post100 False
@@ -483,8 +483,8 @@ index 0000000..72a720a
 +# remove env dsm0
 +#
 +echo "CONDA_DEFAULT_ENV = $CONDA_DEFAULT_ENV"
-+#if [ x"$CONDA_DEFAULT_ENV" = x"${CONDA_DEFAULT_ENV%dsm0}" ]; then 
-+if [ x"${CONDA_DEFAULT_ENV}" = "xdsm0" ]; then 
++#if [ x"$CONDA_DEFAULT_ENV" = x"${CONDA_DEFAULT_ENV%dsm0}" ]; then
++if [ x"${CONDA_DEFAULT_ENV}" = "xdsm0" ]; then
 +	conda deactivate
 +fi
 +if conda env list 2>&1 | grep dsm0
@@ -512,13 +512,13 @@ index 0000000..72a720a
 +cd $chem/esm-demo
 +time python demo-esmfold.py 2>&1 | tee "$mydir/demo-esmfold-1.log"
 +# correct output is something like:
-+#	
++#
 +#	torch.__version__='2.0.1'
 +#	esm.version.version='2.0.1'
 +#	inference pdb for sequence[65] in 1.534 s
 +#	88.28911067193674
 +#	write pdb and struct.b_factor.mean() in 0.238 s
-+#	
++#
 +#	real	0m37.557s
 +#	user	1m2.444s
 +#	sys	0m9.914s
@@ -556,12 +556,12 @@ index 0000000..72a720a
 +# ensure updated env dsm0
 +#
 +if [ ! x"${CONDA_DEFAULT_ENV}" = "dsm0" ]; then
-+	if [ ! x"${CONDA_DEFAULT_ENV}" = "xbase" ]; then 
++	if [ ! x"${CONDA_DEFAULT_ENV}" = "xbase" ]; then
 +		echo "B CONDA_DEFAULT_ENV = $CONDA_DEFAULT_ENV --> conda deactivate"
 +		#conda deactivate
 +		conda activate			# without args, returns to 'base'
 +	fi
-+	if [ ! x"${CONDA_DEFAULT_ENV}" = "xdsm0" ]; then 
++	if [ ! x"${CONDA_DEFAULT_ENV}" = "xdsm0" ]; then
 +		conda activate dsm0
 +	fi
 +fi
@@ -618,7 +618,7 @@ index 0000000..f7617cd
 +After much work, `env.sh` leverages an initial `esm-pyt2` environment
 +(see my chem/esm/ subdirectory, env-pyt2.0.yml
 +
-+The `ejk.ipynb` (copy of tutorial.ipynb) will not run on snake10:  
++The `ejk.ipynb` (copy of tutorial.ipynb) will not run on snake10:
 +CUDA out of memory (12 Gb available)
 +
 +The dataset is loaded into cuda memory first, and takes 6 Gb

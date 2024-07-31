@@ -4,6 +4,8 @@ import torch.nn.functional as F
 import numpy as np
 import random, math
 from sidechainnet.utils.measure import get_seq_coords_and_angles
+# TODO we really only need one python function from this "extra dependency"
+# from sidechainnet_utils_measure import get_seq_coords_and_angles
 from prody import *
 from rdkit import Chem
 from rdkit.Chem import PandasTools
@@ -143,7 +145,7 @@ class DrugEnergyModel(FARigidModel):
         sigma = torch.tensor([self.sigma_range[i] for i in sidx]).float().cuda()
         tidx = [np.random.choice(list(range(100)), p=self.density[i]) for i in sidx]
         theta = torch.tensor([self.theta_range[i] for i in tidx]).float().cuda()
-        w = torch.randn(B, 3).cuda() 
+        w = torch.randn(B, 3).cuda()
         hat_w = F.normalize(w, dim=-1)
         w = hat_w * theta.unsqueeze(-1)
         eps = np.random.uniform(0.1, 1.0, size=B)
@@ -204,7 +206,7 @@ class DrugEnergyModel(FARigidModel):
         energy = self.W_o(h).squeeze(-1)  # [B,N+M,N+M]
         energy = (energy * mask_2D).sum(dim=(1,2))  # [B]
         return energy
- 
+
 
 class DrugAllAtomEnergyModel(FARigidModel):
 
@@ -247,8 +249,8 @@ class DrugAllAtomEnergyModel(FARigidModel):
         B, N, M = bind_S.size(0), bind_S.size(1), tgt_X.size(1)
         bind_mask = bind_A[:,:,1].clamp(max=1).float()
         tgt_mask = tgt_A[:,:,1].clamp(max=1).float()
-        bind_A = bind_A * (true_X.norm(dim=-1) > 1e-4).long() 
-        tgt_A = tgt_A * (tgt_X.norm(dim=-1) > 1e-4).long() 
+        bind_A = bind_A * (true_X.norm(dim=-1) > 1e-4).long()
+        tgt_A = tgt_A * (tgt_X.norm(dim=-1) > 1e-4).long()
         sc_mask = (tgt_A[:,:,4:] > 0).float().view(B*M, 10)
         has_sc = sc_mask.sum(dim=-1).clamp(max=1)
 
@@ -275,7 +277,7 @@ class DrugAllAtomEnergyModel(FARigidModel):
         sigma = torch.tensor([self.sigma_range[i] for i in aidx]).float().cuda()
         bidx = [np.random.choice(list(range(100)), p=self.density[i]) for i in aidx]
         theta = torch.tensor([self.theta_range[i] for i in bidx]).float().cuda()
-        u = torch.randn(B*M, 3).cuda() 
+        u = torch.randn(B*M, 3).cuda()
         hat_u = F.normalize(u, dim=-1)
         u = hat_u * theta.unsqueeze(-1)
         # Apply
@@ -295,8 +297,8 @@ class DrugAllAtomEnergyModel(FARigidModel):
         mask_2D = mask_2D * (D < self.threshold).float()
         # Energy
         h = self.encoder(
-                (bind_X, bind_S, bind_A, None), 
-                (tgt_X, tgt_S, tgt_A, None), 
+                (bind_X, bind_S, bind_A, None),
+                (tgt_X, tgt_S, tgt_A, None),
         )  # [B,N+M,14,H]
         bind_h = self.W_o(h[:, :N]).view(B, N*14, -1)
         tgt_h = self.U_o(h[:, N:]).view(B, M*14, -1)
@@ -344,16 +346,16 @@ class DrugAllAtomEnergyModel(FARigidModel):
         B, N, M = bind_S.size(0), bind_S.size(1), tgt_X.size(1)
         bind_mask = bind_A[:,:,1].clamp(max=1).float()
         tgt_mask = tgt_A[:,:,1].clamp(max=1).float()
-        bind_A = bind_A * (bind_X.norm(dim=-1) > 1e-4).long() 
-        tgt_A = tgt_A * (tgt_X.norm(dim=-1) > 1e-4).long() 
+        bind_A = bind_A * (bind_X.norm(dim=-1) > 1e-4).long()
+        tgt_A = tgt_A * (tgt_X.norm(dim=-1) > 1e-4).long()
 
         mask_2D = (bind_A > 0).float().view(B,N*14,1) * (tgt_A > 0).float().view(B,1,M*14)
         D = (bind_X.view(B,N*14,1,3) - tgt_X.view(B,1,M*14,3)).norm(dim=-1)  # [B,N*14,M*14]
         mask_2D = mask_2D * (D < self.threshold).float()
 
         h = self.encoder(
-                (bind_X, bind_S, bind_A, None), 
-                (tgt_X, tgt_S, tgt_A, None), 
+                (bind_X, bind_S, bind_A, None),
+                (tgt_X, tgt_S, tgt_A, None),
         )  # [B,N+M,14,H]
 
         bind_h = self.W_o(h[:, :N]).view(B, N*14, -1)
@@ -365,7 +367,7 @@ class DrugAllAtomEnergyModel(FARigidModel):
             return (energy * mask_2D).sum(dim=(-1, -2))
         else:
             return (energy * mask_2D).sum(dim=(1,2))  # [B]
-    
+
     def virtual_screen(self, protein_pdb, sdf_list, batch_size=200):
         hchain = parsePDB(protein_pdb, model=1)
         _, hcoords, hseq, _, _ = get_seq_coords_and_angles(hchain)
@@ -379,7 +381,7 @@ class DrugAllAtomEnergyModel(FARigidModel):
                 "binder_mol": mol, "target_seq": hseq, "target_coords": hcoords,
             }
             all_data.append(entry)
-        
+
         embedding = load_esm_embedding(all_data[0], ['target_seq'])
         all_data = DrugDataset.process(all_data, self.args.patch_size)
         all_score = []
@@ -456,7 +458,7 @@ class DrugDecoyModel(DrugAllAtomEnergyModel):
             sigma = torch.tensor([self.sigma_range[i] for i in sidx]).float().cuda()
             tidx = [np.random.choice(list(range(100)), p=self.density[i]) for i in sidx]
             theta = torch.tensor([self.theta_range[i] for i in tidx]).float().cuda()
-            w = torch.randn(B, 3).cuda() 
+            w = torch.randn(B, 3).cuda()
             hat_w = F.normalize(w, dim=-1)
             w = hat_w * theta.unsqueeze(-1)
             eps = np.random.uniform(0.1, 1.0, size=B)
@@ -493,4 +495,4 @@ class DrugDecoyModel(DrugAllAtomEnergyModel):
         label = torch.tensor([0] * B).cuda() # 0 is true energy
         loss = self.ce_loss(energy, label)
         return loss
- 
+

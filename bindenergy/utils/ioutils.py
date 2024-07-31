@@ -8,8 +8,13 @@ from biotite.structure import Atom
 from bindenergy.data.constants import RESTYPE_1to3, ALPHABET, RES_ATOM14
 from tqdm import tqdm   # , trange
 import torch
-import esm
 import gc
+try:
+    import esm
+    hug_esm = False
+except ImportError:
+    from transformers.models import esm
+    hug_esm = True
 
 
 def print_pdb(coord, seq, chain, indices=None):
@@ -49,7 +54,20 @@ def print_ca_pdb(coord, seq, chain, indices=None):
 # memory usage for attention during training will scale as O(batch_size * num_layers * seq_len^2)
 #
 def load_esm_embedding(data, fields, truncation_seq_length: int = None):
-    model, alphabet = esm.pretrained.esm2_t36_3B_UR50D()
+    try:
+        # facebook original
+        # model, alphabet = esm.pretrained.esm2_t36_3B_UR50D()
+        model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
+    except AttributeError:
+        # model_checkpoint = "facebook/esm2_t12_35M_UR50D"
+        # model_checkpoint = "facebook/esm2_t30_150M_UR50D"
+        model_checkpoint = "facebook/esm2_t33_650M_UR50D"
+        # model_checkpoint = "facebook/esm2_t36_3B_UR50D"
+        # model_checkpoint = "facebook/esm2_t48_15B_UR50D"
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
+        print(f"{tokenizer.__dict__.keys()=}")
+
 
     # Note: 3B float32 suggests 16G to 24G GPU mem
     # We can switch the esm "stem" to bfloat16 (training used bf16 anyway)
